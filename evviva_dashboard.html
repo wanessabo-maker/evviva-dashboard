@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EVVIVA — Dashboard de Montagens</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #0a0a0a;
+    --white: #f5f5f3;
+    --gray-100: #e8e8e6;
+    --gray-200: #c8c8c5;
+    --gray-400: #888884;
+    --gray-600: #4a4a47;
+    --accent: #c8b89a;
+    --accent-dark: #8a7a65;
+    --evviva: #1a1a18;
+    --green: #4a7c59;
+    --amber: #b5862a;
+    --red: #8b3a3a;
+    --blue: #2a5080;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* AUTH SCREEN */
+  #auth-screen {
+    position: fixed; inset: 0;
+    background: var(--black);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    gap: 2.5rem;
+  }
+
+  .auth-logo {
+    letter-spacing: 0.45em;
+    font-size: 2.8rem;
+    font-weight: 300;
+    color: var(--white);
+    font-family: 'Cormorant Garamond', serif;
+  }
+
+  .auth-subtitle {
+    letter-spacing: 0.25em;
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: var(--gray-400);
+    text-transform: uppercase;
+    font-family: Arial, sans-serif;
+    margin-top: -1.8rem;
+  }
+
+  .auth-divider {
+    width: 1px;
+    height: 60px;
+    background: linear-gradient(to bottom, transparent, var(--accent), transparent);
+  }
+
+  .auth-text {
+    font-size: 1.1rem;
+    font-weight: 300;
+    color: var(--gray-200);
+    letter-spacing: 0.05em;
+    text-align: center;
+    line-height: 1.7;
+  }
+
+  .btn-auth {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--white);
+    padding: 1rem 3rem;
+    font-family: Arial, sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.4s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-auth::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s ease;
+    z-index: -1;
+  }
+
+  .btn-auth:hover::before { transform: scaleX(1); }
+  .btn-auth:hover { color: var(--black); }
+
+  .auth-error {
+    color: #c97a7a;
+    font-family: Arial, sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    display: none;
+  }
+
+  /* MAIN DASHBOARD */
+  #dashboard {
+    display: none;
+    min-height: 100vh;
+    flex-direction: column;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.8rem 3.5rem;
+    border-bottom: 1px solid rgba(200,184,154,0.15);
+    position: sticky; top: 0;
+    background: rgba(10,10,10,0.97);
+    backdrop-filter: blur(10px);
+    z-index: 100;
+  }
+
+  .header-left { display: flex; align-items: baseline; gap: 2rem; }
+
+  .logo {
+    font-size: 1.9rem;
+    letter-spacing: 0.42em;
+    font-weight: 300;
+    color: var(--white);
+  }
+
+  .header-label {
+    font-family: Arial, sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--gray-400);
+    padding-bottom: 3px;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+  }
+
+  .last-update {
+    font-family: Arial, sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    color: var(--gray-400);
+    text-transform: uppercase;
+  }
+
+  .live-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s infinite;
+    display: inline-block;
+    margin-right: 6px;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  .btn-refresh {
+    background: transparent;
+    border: 1px solid rgba(200,184,154,0.3);
+    color: var(--accent);
+    padding: 0.5rem 1.2rem;
+    font-family: Arial, sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+
+  .btn-refresh:hover {
+    border-color: var(--accent);
+    background: rgba(200,184,154,0.08);
+  }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid rgba(200,184,154,0.1);
+    padding: 0 3.5rem;
+    background: var(--black);
+    gap: 0;
+  }
+
+  .tab {
+    padding: 1.1rem 2rem;
+    font-family: Arial, sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--gray-400);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s;
+    white-space: nowrap;
+  }
+
+  .tab:hover { color: var(--gray-200); }
+
+  .tab.active {
+    color: var(--white);
+    border-bottom-color: var(--accent);
+  }
+
+  .tab-count {
+    display: inline-block;
+    background: rgba(200,184,154,0.15);
+    color: var(--accent);
+    font-size: 0.55rem;
+    padding: 1px 6px;
+    border-radius: 10px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  /* MAIN CONTENT */
+  main {
+    padding: 2.5rem 3.5rem;
+    flex: 1;
+  }
+
+  /* SUMMARY CARDS */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.2rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .summary-card {
+    border: 1px solid rgba(200,184,154,0.12);
+    padding: 1.5rem 1.8rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+
+  .summary-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s ease;
+  }
+
+  .summary-card:hover { border-color: rgba(200,184,154,0.3); }
+  .summary-card:hover::before { transform: scaleX(1); }
+
+  .card-label {
+    font-family: Arial, sans-serif;
+    font-size: 0.58rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--gray-400);
+    margin-bottom: 0.8rem;
+  }
+
+  .card-value {
+    font-size: 2.8rem;
+    font-weight: 300;
+    color: var(--white);
+    line-height: 1;
+    margin-bottom: 0.4rem;
+  }
+
+  .card-sub {
+    font-family: Arial, sans-serif;
+    font-size: 0.6rem;
+    color: var(--gray-400);
+    letter-spacing: 0.05em;
+  }
+
+  .card-accent { color: var(--accent); }
+
+  /* UNIVERSE SECTION */
+  .universe-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .universe-card {
+    border: 1px solid rgba(200,184,154,0.12);
+    padding: 1.8rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .universe-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+
+  .universe-title {
+    font-family: Arial, sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--gray-400);
+    line-height: 1.6;
+  }
+
+  .universe-icon {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+
+  .universe-count {
+    font-size: 3.5rem;
+    font-weight: 300;
+    color: var(--white);
+    line-height: 1;
+    margin-bottom: 1rem;
+  }
+
+  .progress-bar {
+    height: 2px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 1px;
+    overflow: hidden;
+    margin-bottom: 0.8rem;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 1px;
+    transition: width 1s ease;
+  }
+
+  .u1 .progress-fill { background: var(--accent); }
+  .u2 .progress-fill { background: var(--blue); }
+  .u3 .progress-fill { background: var(--amber); }
+
+  .universe-stats {
+    display: flex;
+    gap: 1.5rem;
+  }
+
+  .u-stat {
+    font-family: Arial, sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+  }
+
+  .u-stat-val {
+    display: block;
+    font-size: 1rem;
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    color: var(--white);
+    margin-bottom: 2px;
+  }
+
+  .u-stat-lbl {
+    color: var(--gray-400);
+    text-transform: uppercase;
+    font-size: 0.55rem;
+    letter-spacing: 0.15em;
+  }
+
+  /* TABLE */
+  .table-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.2rem;
+  }
+
+  .section-title {
+    font-size: 1.1rem;
+    font-weight: 300;
+    color: var(--white);
+    letter-spacing: 0.08em;
+  }
+
+  .table-controls {
+    display: flex;
+    gap: 0.8rem;
+    align-items: center;
+  }
+
+  .filter-input {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(200,184,154,0.15);
+    color: var(--white);
+    padding: 0.5rem 1rem;
+    font-family: Arial, sans-serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.05em;
+    outline: none;
+    width: 220px;
+    transition: border-color 0.3s;
+  }
+
+  .filter-input::placeholder { color: var(--gray-400); }
+  .filter-input:focus { border-color: var(--accent); }
+
+  .filter-select {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(200,184,154,0.15);
+    color: var(--white);
+    padding: 0.5rem 0.8rem;
+    font-family: Arial, sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 0.05em;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .filter-select option { background: var(--black); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+
+  thead tr {
+    border-bottom: 1px solid rgba(200,184,154,0.2);
+  }
+
+  th {
+    font-family: Arial, sans-serif;
+    font-size: 0.55rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--gray-400);
+    text-align: left;
+    padding: 0.8rem 0.7rem;
+    font-weight: 400;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  th:hover { color: var(--accent); }
+
+  tbody tr {
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    transition: background 0.2s;
+  }
+
+  tbody tr:hover { background: rgba(200,184,154,0.04); }
+
+  td {
+    padding: 0.8rem 0.7rem;
+    color: var(--gray-200);
+    font-weight: 300;
+    vertical-align: middle;
+    font-size: 0.88rem;
+  }
+
+  td.name-cell {
+    color: var(--white);
+    font-size: 0.95rem;
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    font-family: Arial, sans-serif;
+    font-size: 0.55rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    border-radius: 2px;
+  }
+
+  .badge-faturado { background: rgba(74,124,89,0.15); color: #7ab88a; border: 1px solid rgba(74,124,89,0.3); }
+  .badge-montagem { background: rgba(181,134,42,0.15); color: #d4a84b; border: 1px solid rgba(181,134,42,0.3); }
+  .badge-entregue { background: rgba(42,80,128,0.15); color: #6a9fd4; border: 1px solid rgba(42,80,128,0.3); }
+  .badge-pendente { background: rgba(139,58,58,0.15); color: #c48080; border: 1px solid rgba(139,58,58,0.3); }
+  .badge-default { background: rgba(136,136,132,0.1); color: var(--gray-400); border: 1px solid rgba(136,136,132,0.2); }
+
+  .universe-tag {
+    display: inline-block;
+    padding: 1px 8px;
+    font-family: Arial, sans-serif;
+    font-size: 0.5rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border-radius: 1px;
+  }
+
+  .utag-evviva { background: rgba(200,184,154,0.12); color: var(--accent); }
+  .utag-engenharia { background: rgba(42,80,128,0.12); color: #6a9fd4; }
+  .utag-nelson { background: rgba(181,134,42,0.12); color: #d4a84b; }
+
+  /* PAGINATION */
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .page-info {
+    font-family: Arial, sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    color: var(--gray-400);
+  }
+
+  .page-btns { display: flex; gap: 0.4rem; }
+
+  .page-btn {
+    background: transparent;
+    border: 1px solid rgba(200,184,154,0.15);
+    color: var(--gray-200);
+    padding: 0.35rem 0.8rem;
+    font-family: Arial, sans-serif;
+    font-size: 0.6rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .page-btn:hover, .page-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(200,184,154,0.06);
+  }
+
+  /* LOADING */
+  .loading-overlay {
+    position: fixed; inset: 0;
+    background: rgba(10,10,10,0.92);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 500;
+    gap: 1.5rem;
+  }
+
+  .loading-logo {
+    font-size: 2rem;
+    letter-spacing: 0.45em;
+    font-weight: 300;
+    color: var(--white);
+    animation: fadeIn 0.5s ease;
+  }
+
+  .loading-bar-track {
+    width: 200px;
+    height: 1px;
+    background: rgba(200,184,154,0.15);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .loading-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    animation: loadingAnim 1.5s ease infinite;
+  }
+
+  @keyframes loadingAnim {
+    0% { width: 0%; margin-left: 0; }
+    50% { width: 60%; margin-left: 20%; }
+    100% { width: 0%; margin-left: 100%; }
+  }
+
+  .loading-text {
+    font-family: Arial, sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--gray-400);
+  }
+
+  /* CHARTS ROW */
+  .charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .chart-card {
+    border: 1px solid rgba(200,184,154,0.12);
+    padding: 1.8rem;
+  }
+
+  .chart-title {
+    font-family: Arial, sans-serif;
+    font-size: 0.58rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--gray-400);
+    margin-bottom: 1.5rem;
+  }
+
+  /* DONUT */
+  .donut-wrap {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+  }
+
+  .donut-svg { flex-shrink: 0; }
+
+  .donut-legend { flex: 1; }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .legend-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .legend-label {
+    font-family: Arial, sans-serif;
+    font-size: 0.6rem;
+    color: var(--gray-200);
+    letter-spacing: 0.05em;
+    flex: 1;
+  }
+
+  .legend-pct {
+    font-size: 0.9rem;
+    font-weight: 300;
+    color: var(--white);
+  }
+
+  /* BAR CHART */
+  .bar-chart { display: flex; flex-direction: column; gap: 0.8rem; }
+
+  .bar-item { }
+
+  .bar-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+
+  .bar-label {
+    font-family: Arial, sans-serif;
+    font-size: 0.6rem;
+    color: var(--gray-200);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .bar-val {
+    font-family: Arial, sans-serif;
+    font-size: 0.6rem;
+    color: var(--accent);
+  }
+
+  .bar-track {
+    height: 3px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 1s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .content-panel { animation: fadeIn 0.5s ease; }
+
+  /* EMPTY / ERROR state */
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--gray-400);
+    font-family: Arial, sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+  }
+
+  .empty-state h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.8rem;
+    font-weight: 300;
+    color: var(--gray-600);
+    margin-bottom: 0.8rem;
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: var(--black); }
+  ::-webkit-scrollbar-thumb { background: var(--gray-600); }
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-logo">E V V I V A</div>
+  <div class="auth-subtitle">Dashboard de Montagens</div>
+  <div class="auth-divider"></div>
+  <p class="auth-text">Conecte-se com sua conta Microsoft<br>para carregar os dados em tempo real.</p>
+  <button class="btn-auth" onclick="startAuth()">Entrar com Microsoft 365</button>
+  <div class="auth-error" id="auth-error">Falha na autenticação. Tente novamente.</div>
+</div>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loading" style="display:none">
+  <div class="loading-logo">E V V I V A</div>
+  <div class="loading-bar-track"><div class="loading-bar-fill"></div></div>
+  <div class="loading-text" id="loading-text">Carregando dados...</div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" style="display:flex; flex-direction:column;">
+  <header>
+    <div class="header-left">
+      <span class="logo">E V V I V A</span>
+      <span class="header-label">Controle de Montagens</span>
+    </div>
+    <div class="header-right">
+      <span class="last-update">
+        <span class="live-dot"></span>
+        <span id="update-time">—</span>
+      </span>
+      <button class="btn-refresh" onclick="loadData()">↻ Atualizar</button>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('all')" id="tab-all">
+      Visão Geral <span class="tab-count" id="cnt-all">0</span>
+    </div>
+    <div class="tab" onclick="switchTab('evviva')" id="tab-evviva">
+      Evviva Cliente Final <span class="tab-count" id="cnt-evviva">0</span>
+    </div>
+    <div class="tab" onclick="switchTab('engenharia')" id="tab-engenharia">
+      Canal Engenharia <span class="tab-count" id="cnt-engenharia">0</span>
+    </div>
+    <div class="tab" onclick="switchTab('nelson')" id="tab-nelson">
+      Extras (Nelson) <span class="tab-count" id="cnt-nelson">0</span>
+    </div>
+  </div>
+
+  <main>
+    <div id="content-all" class="content-panel">
+      <!-- SUMMARY CARDS -->
+      <div class="summary-grid" id="summary-cards"></div>
+      <!-- UNIVERSE CARDS -->
+      <div class="universe-grid" id="universe-cards"></div>
+      <!-- CHARTS -->
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-title">Distribuição por Universo</div>
+          <div class="donut-wrap" id="donut-wrap">
+            <svg class="donut-svg" width="120" height="120" viewBox="0 0 120 120" id="donut-svg"></svg>
+            <div class="donut-legend" id="donut-legend"></div>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Status das Montagens</div>
+          <div class="bar-chart" id="status-bars"></div>
+        </div>
+      </div>
+      <!-- TABLE -->
+      <div class="table-section">
+        <div class="table-header">
+          <span class="section-title">Todos os Registros</span>
+          <div class="table-controls">
+            <input class="filter-input" type="text" id="search-all" placeholder="Buscar cliente, pedido..." oninput="renderTable('all')">
+            <select class="filter-select" id="status-filter-all" onchange="renderTable('all')">
+              <option value="">Todos os status</option>
+            </select>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr id="thead-all"></tr>
+          </thead>
+          <tbody id="tbody-all"></tbody>
+        </table>
+        <div class="pagination" id="pagination-all"></div>
+      </div>
+    </div>
+
+    <!-- UNIVERSE PANELS -->
+    <div id="content-evviva" class="content-panel" style="display:none">
+      <div class="table-header">
+        <span class="section-title">Evviva — Cliente Final</span>
+        <div class="table-controls">
+          <input class="filter-input" type="text" id="search-evviva" placeholder="Buscar..." oninput="renderTable('evviva')">
+          <select class="filter-select" id="status-filter-evviva" onchange="renderTable('evviva')">
+            <option value="">Todos os status</option>
+          </select>
+        </div>
+      </div>
+      <table><thead><tr id="thead-evviva"></tr></thead><tbody id="tbody-evviva"></tbody></table>
+      <div class="pagination" id="pagination-evviva"></div>
+    </div>
+
+    <div id="content-engenharia" class="content-panel" style="display:none">
+      <div class="table-header">
+        <span class="section-title">Canal Engenharia</span>
+        <div class="table-controls">
+          <input class="filter-input" type="text" id="search-engenharia" placeholder="Buscar..." oninput="renderTable('engenharia')">
+          <select class="filter-select" id="status-filter-engenharia" onchange="renderTable('engenharia')">
+            <option value="">Todos os status</option>
+          </select>
+        </div>
+      </div>
+      <table><thead><tr id="thead-engenharia"></tr></thead><tbody id="tbody-engenharia"></tbody></table>
+      <div class="pagination" id="pagination-engenharia"></div>
+    </div>
+
+    <div id="content-nelson" class="content-panel" style="display:none">
+      <div class="table-header">
+        <span class="section-title">Montagens Extras — Nelson</span>
+        <div class="table-controls">
+          <input class="filter-input" type="text" id="search-nelson" placeholder="Buscar..." oninput="renderTable('nelson')">
+          <select class="filter-select" id="status-filter-nelson" onchange="renderTable('nelson')">
+            <option value="">Todos os status</option>
+          </select>
+        </div>
+      </div>
+      <table><thead><tr id="thead-nelson"></tr></thead><tbody id="tbody-nelson"></tbody></table>
+      <div class="pagination" id="pagination-nelson"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+// ============================================================
+// CONFIG — Microsoft Graph + SharePoint IDs
+// ============================================================
+const DRIVE_ID = 'b!i7_XU-C3-kK09bIDH-OIVe5LVW0Q529Csa02_SKI2UITn2a3NH6ASqd4e8G5j-UW';
+const FILE_ID  = '01UXE5TTHMDKXJPIXCXBCZXT7HT3BNHYDT';
+
+// MSAL config — você precisará registrar um App no Azure AD com as permissões:
+// Files.Read.All, Sites.Read.All
+const MSAL_CONFIG = {
+  clientId: 'SEU_CLIENT_ID_AQUI', // ← substitua pelo seu App Registration Client ID
+  authority: 'https://login.microsoftonline.com/common',
+  redirectUri: window.location.href.split('?')[0].split('#')[0],
+};
+
+const SCOPES = ['Files.Read.All', 'Sites.Read.All', 'offline_access'];
+
+// ============================================================
+// STATE
+// ============================================================
+let allData = [];
+let universeData = { evviva: [], engenharia: [], nelson: [] };
+let currentTab = 'all';
+let pages = { all: 1, evviva: 1, engenharia: 1, nelson: 1 };
+const PAGE_SIZE = 20;
+let msalInstance = null;
+
+// ============================================================
+// MSAL BOOTSTRAP
+// ============================================================
+async function initMsal() {
+  if (window.msal) return;
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/msal.js/2.38.3/msal-browser.min.js');
+  const { PublicClientApplication } = window.msal || {};
+  // fallback
+  if (!PublicClientApplication) {
+    console.warn('MSAL não carregou, tentando com msal.min.js');
+    return null;
+  }
+  const config = {
+    auth: { clientId: MSAL_CONFIG.clientId, authority: MSAL_CONFIG.authority, redirectUri: MSAL_CONFIG.redirectUri },
+    cache: { cacheLocation: 'sessionStorage', storeAuthStateInCookie: false }
+  };
+  msalInstance = new PublicClientApplication(config);
+  await msalInstance.initialize();
+  return msalInstance;
+}
+
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+
+async function startAuth() {
+  document.getElementById('auth-error').style.display = 'none';
+  try {
+    await initMsal();
+    if (!msalInstance) {
+      // Modo demo se MSAL não disponível
+      loadDemoData();
+      return;
+    }
+    await msalInstance.handleRedirectPromise();
+    const accounts = msalInstance.getAllAccounts();
+    if (accounts.length === 0) {
+      await msalInstance.loginRedirect({ scopes: SCOPES });
+    } else {
+      loadData();
+    }
+  } catch(e) {
+    console.error(e);
+    // Se Client ID não configurado, carrega demo
+    if (MSAL_CONFIG.clientId === 'SEU_CLIENT_ID_AQUI') {
+      loadDemoData();
+    } else {
+      document.getElementById('auth-error').style.display = 'block';
+    }
+  }
+}
+
+async function getToken() {
+  if (!msalInstance) return null;
+  const accounts = msalInstance.getAllAccounts();
+  if (!accounts.length) return null;
+  try {
+    const r = await msalInstance.acquireTokenSilent({ scopes: SCOPES, account: accounts[0] });
+    return r.accessToken;
+  } catch {
+    const r = await msalInstance.acquireTokenPopup({ scopes: SCOPES });
+    return r.accessToken;
+  }
+}
+
+// ============================================================
+// DATA LOADING — Microsoft Graph Excel API
+// ============================================================
+async function loadData() {
+  showLoading('Conectando ao SharePoint...');
+  try {
+    const token = await getToken();
+    if (!token) { loadDemoData(); return; }
+
+    setLoadingText('Lendo planilha...');
+    // Listar abas
+    const sheetsRes = await fetch(
+      `https://graph.microsoft.com/v1.0/drives/${DRIVE_ID}/items/${FILE_ID}/workbook/worksheets`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const sheetsJson = await sheetsRes.json();
+    const sheets = sheetsJson.value || [];
+    
+    // Identificar abas de resumo
+    const targetSheets = sheets.filter(s =>
+      s.name.toLowerCase().includes('resumo') ||
+      s.name.toLowerCase().includes('evviva') ||
+      s.name.toLowerCase().includes('engenharia') ||
+      s.name.toLowerCase().includes('nelson') ||
+      s.name.toLowerCase().includes('geral')
+    );
+
+    const sheetToUse = targetSheets.length ? targetSheets : sheets.slice(0, 4);
+
+    let raw = [];
+    for (const sheet of sheetToUse) {
+      setLoadingText(`Lendo aba: ${sheet.name}...`);
+      const rangeRes = await fetch(
+        `https://graph.microsoft.com/v1.0/drives/${DRIVE_ID}/items/${FILE_ID}/workbook/worksheets/${encodeURIComponent(sheet.id)}/usedRange`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const rangeJson = await rangeRes.json();
+      if (rangeJson.values && rangeJson.values.length > 1) {
+        const headers = rangeJson.values[0].map(h => String(h || '').trim());
+        const rows = rangeJson.values.slice(1);
+        rows.forEach(row => {
+          if (row.some(c => c !== null && c !== '')) {
+            const obj = {};
+            headers.forEach((h, i) => { obj[h] = row[i] !== undefined ? row[i] : ''; });
+            obj._sheet = sheet.name;
+            obj._universe = detectUniverse(sheet.name, obj);
+            raw.push(obj);
+          }
+        });
+      }
+    }
+
+    processData(raw);
+    hideLoading();
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'flex';
+  } catch(e) {
+    console.error(e);
+    hideLoading();
+    loadDemoData();
+  }
+}
+
+function detectUniverse(sheetName, row) {
+  const s = sheetName.toLowerCase();
+  if (s.includes('nelson') || s.includes('extra')) return 'nelson';
+  if (s.includes('engenharia') || s.includes('canal')) return 'engenharia';
+  if (s.includes('evviva') || s.includes('cliente') || s.includes('resumo')) return 'evviva';
+  // Fallback: checar campos do row
+  const vals = Object.values(row).map(v => String(v || '').toLowerCase()).join(' ');
+  if (vals.includes('nelson')) return 'nelson';
+  if (vals.includes('engenhari')) return 'engenharia';
+  return 'evviva';
+}
+
+// ============================================================
+// DEMO DATA (quando MSAL não configurado)
+// ============================================================
+function loadDemoData() {
+  showLoading('Carregando dados de demonstração...');
+  setTimeout(() => {
+    const statuses = ['FATURADO', 'EM MONTAGEM', 'ENTREGUE', 'PENDENTE', 'AGENDADO'];
+    const ambientes = ['SALA DE ESTAR', 'SUÍTE MASTER', 'COZINHA', 'LAVABO', 'SALA JANTAR', 'ESCRITÓRIO', 'DESPENSA', 'QUARTO'];
+    const names = ['Ana Beatriz Santos','Carlos Oliveira','Fernanda Lima','Ricardo Souza','Mariana Costa','Pedro Alves','Juliana Ferreira','Thiago Mendes','Camila Rodrigues','Eduardo Silva','Larissa Pereira','Bruno Martins','Gabriela Nascimento','Felipe Carvalho','Isabela Araújo','Rodrigo Gomes','Tatiane Pinto','Leandro Barbosa','Natália Moreira','André Castro'];
+    const universes = ['evviva','evviva','evviva','evviva','engenharia','engenharia','nelson'];
+
+    const raw = [];
+    for (let i = 0; i < 120; i++) {
+      const u = universes[Math.floor(Math.random() * universes.length)];
+      raw.push({
+        'CLIENTE': names[Math.floor(Math.random() * names.length)],
+        'PEDIDO': String(270000 + Math.floor(Math.random() * 15000)),
+        'NOTA FISCAL': String(80000 + Math.floor(Math.random() * 5000)),
+        'DATA FATURAMENTO': `${String(Math.floor(Math.random()*28)+1).padStart(2,'0')}/${String(Math.floor(Math.random()*12)+1).padStart(2,'0')}/2024`,
+        'AMBIENTE': ambientes[Math.floor(Math.random() * ambientes.length)],
+        'STATUS': statuses[Math.floor(Math.random() * statuses.length)],
+        'CUSTO FABRICA': (Math.random() * 15000 + 800).toFixed(2),
+        _universe: u,
+        _sheet: u === 'evviva' ? 'RESUMO EVVIVA' : u === 'engenharia' ? 'RESUMO ENGENHARIA' : 'NELSON'
+      });
+    }
+    processData(raw);
+    hideLoading();
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'flex';
+  }, 1800);
+}
+
+// ============================================================
+// DATA PROCESSING
+// ============================================================
+function processData(raw) {
+  allData = raw;
+  universeData.evviva = raw.filter(r => r._universe === 'evviva');
+  universeData.engenharia = raw.filter(r => r._universe === 'engenharia');
+  universeData.nelson = raw.filter(r => r._universe === 'nelson');
+
+  updateCounts();
+  renderSummaryCards();
+  renderUniverseCards();
+  renderDonut();
+  renderStatusBars();
+
+  ['all','evviva','engenharia','nelson'].forEach(tab => {
+    populateStatusFilter(tab);
+    renderTableHeaders(tab);
+    renderTable(tab);
+  });
+
+  document.getElementById('update-time').textContent = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+}
+
+function getDataForTab(tab) {
+  if (tab === 'all') return allData;
+  return universeData[tab] || [];
+}
+
+function updateCounts() {
+  document.getElementById('cnt-all').textContent = allData.length;
+  document.getElementById('cnt-evviva').textContent = universeData.evviva.length;
+  document.getElementById('cnt-engenharia').textContent = universeData.engenharia.length;
+  document.getElementById('cnt-nelson').textContent = universeData.nelson.length;
+}
+
+// ============================================================
+// SUMMARY CARDS
+// ============================================================
+function renderSummaryCards() {
+  const total = allData.length;
+  const faturados = allData.filter(r => statusClass(r) === 'faturado').length;
+  const emMontagem = allData.filter(r => statusClass(r) === 'montagem').length;
+  const entregues = allData.filter(r => statusClass(r) === 'entregue').length;
+
+  const custoKey = Object.keys(allData[0] || {}).find(k => k.toLowerCase().includes('custo') || k.toLowerCase().includes('valor')) || 'CUSTO FABRICA';
+  const totalCusto = allData.reduce((s, r) => s + (parseFloat(String(r[custoKey] || '0').replace(',','.')) || 0), 0);
+
+  document.getElementById('summary-cards').innerHTML = `
+    <div class="summary-card">
+      <div class="card-label">Total de Montagens</div>
+      <div class="card-value">${total}</div>
+      <div class="card-sub">registros ativos</div>
+    </div>
+    <div class="summary-card">
+      <div class="card-label">Faturadas</div>
+      <div class="card-value card-accent">${faturados}</div>
+      <div class="card-sub">${total ? Math.round(faturados/total*100) : 0}% do total</div>
+    </div>
+    <div class="summary-card">
+      <div class="card-label">Em Montagem</div>
+      <div class="card-value">${emMontagem}</div>
+      <div class="card-sub">em andamento</div>
+    </div>
+    <div class="summary-card">
+      <div class="card-label">Custo Total Fábrica</div>
+      <div class="card-value" style="font-size:2rem;">${totalCusto > 0 ? 'R$ '+totalCusto.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0}) : '—'}</div>
+      <div class="card-sub">valor agregado</div>
+    </div>
+  `;
+}
+
+// ============================================================
+// UNIVERSE CARDS
+// ============================================================
+function renderUniverseCards() {
+  const total = allData.length || 1;
+  const universes = [
+    { key: 'evviva', label: 'Evviva\nCliente Final', icon: '◆', cls: 'u1', color: '#c8b89a' },
+    { key: 'engenharia', label: 'Canal\nEngenharia', icon: '▲', cls: 'u2', color: '#6a9fd4' },
+    { key: 'nelson', label: 'Montagens\nExtras (Nelson)', icon: '●', cls: 'u3', color: '#d4a84b' },
+  ];
+  document.getElementById('universe-cards').innerHTML = universes.map(u => {
+    const data = universeData[u.key];
+    const pct = Math.round(data.length / total * 100);
+    const fat = data.filter(r => statusClass(r) === 'faturado').length;
+    const mont = data.filter(r => statusClass(r) === 'montagem').length;
+    return `
+      <div class="universe-card ${u.cls}">
+        <div class="universe-header">
+          <div class="universe-title">${u.label.replace('\n','<br>')}</div>
+          <div class="universe-icon" style="background:${u.color}18; color:${u.color}">${u.icon}</div>
+        </div>
+        <div class="universe-count">${data.length}</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+        <div class="universe-stats">
+          <div class="u-stat"><span class="u-stat-val">${pct}%</span><span class="u-stat-lbl">do total</span></div>
+          <div class="u-stat"><span class="u-stat-val">${fat}</span><span class="u-stat-lbl">faturadas</span></div>
+          <div class="u-stat"><span class="u-stat-val">${mont}</span><span class="u-stat-lbl">em montagem</span></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ============================================================
+// DONUT CHART
+// ============================================================
+function renderDonut() {
+  const e = universeData.evviva.length;
+  const en = universeData.engenharia.length;
+  const n = universeData.nelson.length;
+  const total = e + en + n || 1;
+  const data = [
+    { label: 'Cliente Final', val: e, color: '#c8b89a' },
+    { label: 'Engenharia', val: en, color: '#6a9fd4' },
+    { label: 'Nelson', val: n, color: '#d4a84b' },
+  ];
+  const cx=60, cy=60, r=45, strokeW=14;
+  const circ = 2*Math.PI*r;
+  let offset = 0;
+  let svgPaths = '';
+  data.forEach(d => {
+    const pct = d.val / total;
+    const dash = pct * circ;
+    svgPaths += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${d.color}" stroke-width="${strokeW}" stroke-dasharray="${dash} ${circ-dash}" stroke-dashoffset="${-offset}" style="transform-origin:center;transform:rotate(-90deg)" opacity="0.85"/>`;
+    offset += dash;
+  });
+  svgPaths += `<text x="${cx}" y="${cy+5}" text-anchor="middle" fill="#f5f5f3" font-size="18" font-family="Cormorant Garamond" font-weight="300">${total}</text>`;
+  document.getElementById('donut-svg').innerHTML = svgPaths;
+  document.getElementById('donut-legend').innerHTML = data.map(d =>
+    `<div class="legend-item">
+      <div class="legend-dot" style="background:${d.color}"></div>
+      <span class="legend-label">${d.label}</span>
+      <span class="legend-pct">${Math.round(d.val/total*100)}%</span>
+    </div>`
+  ).join('');
+}
+
+// ============================================================
+// STATUS BARS
+// ============================================================
+function renderStatusBars() {
+  const statusKey = Object.keys(allData[0] || {}).find(k => k.toLowerCase().includes('status')) || 'STATUS';
+  const counts = {};
+  allData.forEach(r => {
+    const s = String(r[statusKey] || 'N/A').trim().toUpperCase() || 'N/A';
+    counts[s] = (counts[s]||0) + 1;
+  });
+  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const max = sorted[0]?.[1] || 1;
+  const colors = ['#c8b89a','#6a9fd4','#d4a84b','#7ab88a','#c48080','#888884'];
+  document.getElementById('status-bars').innerHTML = sorted.map(([s, c], i) =>
+    `<div class="bar-item">
+      <div class="bar-meta">
+        <span class="bar-label">${s}</span>
+        <span class="bar-val">${c}</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(c/max*100)}%; background:${colors[i]}"></div></div>
+    </div>`
+  ).join('');
+}
+
+// ============================================================
+// TABLE
+// ============================================================
+function getColumns(data) {
+  if (!data.length) return [];
+  const allKeys = Object.keys(data[0]).filter(k => !k.startsWith('_'));
+  // Priorizar colunas importantes
+  const priority = ['CLIENTE','PEDIDO','PEDIDO EVVIVA','NOTA FISCAL','DATA FATURAMENTO','AMBIENTE','STATUS','CUSTO FABRICA','CUSTO'];
+  const cols = priority.filter(p => allKeys.some(k => k.toUpperCase().includes(p.toUpperCase().replace(' ',''))||k.toUpperCase()===p));
+  // Adicionar restantes
+  allKeys.forEach(k => { if(!cols.includes(k)) cols.push(k); });
+  return cols.slice(0, 8);
+}
+
+function populateStatusFilter(tab) {
+  const data = getDataForTab(tab);
+  const statusKey = Object.keys(data[0]||{}).find(k=>k.toLowerCase().includes('status'))||'STATUS';
+  const statuses = [...new Set(data.map(r=>String(r[statusKey]||'').trim()).filter(Boolean))].sort();
+  const sel = document.getElementById(`status-filter-${tab}`);
+  sel.innerHTML = '<option value="">Todos os status</option>' + statuses.map(s=>`<option value="${s}">${s}</option>`).join('');
+}
+
+function renderTableHeaders(tab) {
+  const data = getDataForTab(tab);
+  const cols = getColumns(data);
+  const addUniverse = tab === 'all';
+  document.getElementById(`thead-${tab}`).innerHTML =
+    (addUniverse ? '<th>Universo</th>' : '') +
+    cols.map(c=>`<th>${c}</th>`).join('');
+}
+
+function renderTable(tab) {
+  const data = getDataForTab(tab);
+  const cols = getColumns(data);
+  const addUniverse = tab === 'all';
+  const search = document.getElementById(`search-${tab}`).value.toLowerCase();
+  const statusFilter = document.getElementById(`status-filter-${tab}`).value;
+  const statusKey = cols.find(c=>c.toLowerCase().includes('status'))||'STATUS';
+
+  let filtered = data.filter(row => {
+    const matchSearch = !search || Object.values(row).some(v=>String(v).toLowerCase().includes(search));
+    const matchStatus = !statusFilter || String(row[statusKey]||'').trim() === statusFilter;
+    return matchSearch && matchStatus;
+  });
+
+  const page = pages[tab] || 1;
+  const total = filtered.length;
+  const start = (page-1)*PAGE_SIZE;
+  const pageData = filtered.slice(start, start+PAGE_SIZE);
+
+  const clientKey = cols.find(c=>c.toLowerCase().includes('client'))||cols[0];
+  const tbody = document.getElementById(`tbody-${tab}`);
+  if (!pageData.length) {
+    tbody.innerHTML = `<tr><td colspan="${cols.length + (addUniverse?1:0)}" style="text-align:center;padding:2rem;color:var(--gray-400);font-family:Arial,sans-serif;font-size:0.7rem;letter-spacing:0.1em">NENHUM REGISTRO ENCONTRADO</td></tr>`;
+  } else {
+    tbody.innerHTML = pageData.map(row => {
+      const cells = cols.map((c,i) => {
+        let val = row[c] !== undefined && row[c] !== null ? String(row[c]) : '—';
+        if (c === clientKey && i === 0) return `<td class="name-cell" title="${val}">${val}</td>`;
+        if (c.toLowerCase().includes('status')) return `<td><span class="badge badge-${statusClass({STATUS:val,_universe:row._universe})}">${val||'—'}</span></td>`;
+        if (c.toLowerCase().includes('custo')||c.toLowerCase().includes('valor')) {
+          const n = parseFloat(val.replace(',','.'));
+          return `<td>${isNaN(n) ? val : 'R$ '+n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>`;
+        }
+        return `<td>${val}</td>`;
+      }).join('');
+      const utag = addUniverse ? `<td><span class="universe-tag utag-${row._universe}">${row._universe==='evviva'?'Cliente Final':row._universe==='engenharia'?'Engenharia':'Nelson'}</span></td>` : '';
+      return `<tr>${utag}${cells}</tr>`;
+    }).join('');
+  }
+
+  // Pagination
+  const totalPages = Math.ceil(total/PAGE_SIZE);
+  const pEl = document.getElementById(`pagination-${tab}`);
+  if (totalPages <= 1) { pEl.innerHTML=''; return; }
+  let btns = '';
+  for(let i=1;i<=Math.min(totalPages,7);i++) {
+    btns += `<button class="page-btn${i===page?' active':''}" onclick="goPage('${tab}',${i})">${i}</button>`;
+  }
+  if(totalPages>7) btns += `<button class="page-btn" onclick="goPage('${tab}',${totalPages})">…${totalPages}</button>`;
+  pEl.innerHTML = `<span class="page-info">${start+1}–${Math.min(start+PAGE_SIZE,total)} de ${total}</span><div class="page-btns">${btns}</div>`;
+}
+
+function goPage(tab, p) {
+  pages[tab] = p;
+  renderTable(tab);
+}
+
+function statusClass(row) {
+  const s = String(row.STATUS||row._status||row['Status']||'').toLowerCase();
+  if (s.includes('fatur')) return 'faturado';
+  if (s.includes('monta')) return 'montagem';
+  if (s.includes('entreg')) return 'entregue';
+  if (s.includes('pendent')||s.includes('aguard')) return 'pendente';
+  return 'default';
+}
+
+// ============================================================
+// TABS
+// ============================================================
+function switchTab(tab) {
+  currentTab = tab;
+  ['all','evviva','engenharia','nelson'].forEach(t => {
+    document.getElementById(`tab-${t}`).classList.toggle('active', t===tab);
+    document.getElementById(`content-${t}`).style.display = t===tab ? 'block' : 'none';
+  });
+}
+
+// ============================================================
+// LOADING
+// ============================================================
+function showLoading(txt) {
+  document.getElementById('loading-text').textContent = txt||'Carregando...';
+  document.getElementById('loading').style.display = 'flex';
+}
+
+function setLoadingText(txt) {
+  document.getElementById('loading-text').textContent = txt;
+}
+
+function hideLoading() {
+  document.getElementById('loading').style.display = 'none';
+}
+
+// ============================================================
+// AUTO-REFRESH every 5 min
+// ============================================================
+setInterval(() => {
+  if(document.getElementById('dashboard').style.display !== 'none') loadData();
+}, 5 * 60 * 1000);
+
+// ============================================================
+// HANDLE MSAL REDIRECT ON PAGE LOAD
+// ============================================================
+window.addEventListener('load', async () => {
+  try {
+    await initMsal();
+    if (msalInstance) {
+      const resp = await msalInstance.handleRedirectPromise();
+      const accounts = msalInstance.getAllAccounts();
+      if (accounts.length > 0) {
+        loadData();
+        return;
+      }
+    }
+  } catch(e) { console.error(e); }
+  // Mostra tela de auth
+  document.getElementById('auth-screen').style.display = 'flex';
+});
+</script>
+</body>
+</html>
