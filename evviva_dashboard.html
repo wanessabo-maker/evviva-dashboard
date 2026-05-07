@@ -626,9 +626,9 @@ function renderTableHeaders(tab) {
 
 function renderTable(tab) {
   var data = universeData[tab]||[];
-  var search = document.getElementById('search-'+tab).value.toLowerCase();
-  var yearF = document.getElementById('year-filter-'+tab).value;
-  var statusF = document.getElementById('status-filter-'+tab).value;
+  var searchEl = document.getElementById('search-'+tab); var search = searchEl ? searchEl.value.toLowerCase() : '';
+  var yearFEl = document.getElementById('year-filter-'+tab); var yearF = yearFEl ? yearFEl.value : '';
+  var statusF = '';
   var filtered = data.filter(function(row){
     var matchSearch = !search || Object.values(row).some(function(v){ return String(v).toLowerCase().indexOf(search)>=0; });
     var dk = getDateKey(row);
