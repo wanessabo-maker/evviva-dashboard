@@ -278,11 +278,22 @@ async function loadData() {
     var sheetsJson = await sheetsRes.json();
     var sheets = sheetsJson.value || [];
     var assistenciaSheet = null, engenhariaSheet = null;
+    // Log all sheet names for debugging
+    console.log('Available sheets:', sheets.map(function(s){ return s.name; }));
     for (var i=0; i<sheets.length; i++) {
-      var n = sheets[i].name.toLowerCase();
-      if (n.indexOf('abou') >= 0 || n.indexOf('assist') >= 0) assistenciaSheet = sheets[i];
-      if ((n.indexOf('canal') >= 0 && n.indexOf('eng') >= 0) || (n.indexOf('resum') >= 0 && n.indexOf('eng') >= 0)) engenhariaSheet = sheets[i];
+      var n = sheets[i].name.toLowerCase().trim();
+      // Aba Cliente Final: "RESUMO ABOU ATUAIS - ASSISTÊNCI"
+      if (n.indexOf('resumo abou') >= 0 || n.indexOf('abou atuais') >= 0 || 
+          (n.indexOf('abou') >= 0 && n.indexOf('atual') >= 0)) {
+        assistenciaSheet = sheets[i];
+      }
+      // Aba Engenharia: "RESUMO CANAL ENG."
+      if (n.indexOf('resumo canal') >= 0 || n.indexOf('canal eng') >= 0) {
+        engenhariaSheet = sheets[i];
+      }
     }
+    console.log('Assistencia sheet:', assistenciaSheet ? assistenciaSheet.name : 'NOT FOUND');
+    console.log('Engenharia sheet:', engenhariaSheet ? engenhariaSheet.name : 'NOT FOUND');
     universeData.assistencia = await readSheet(token, assistenciaSheet);
     universeData.engenharia = await readSheet(token, engenhariaSheet);
     processData();
