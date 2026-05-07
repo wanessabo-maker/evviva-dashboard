@@ -196,6 +196,9 @@ var PAGE_SIZE = 25;
 var msalInstance = null;
 var universeData = {assistencia:[],engenharia:[]};
 var pages = {assistencia:1,engenharia:1};
+var COLS=['CLIENTE','DATA FINALIZACAO','VENDA (CONTRATO)','CUSTO FABRICA','CUSTO LOCAL','TOTAL OBRA','LUCRO','MKP','HORAS MONTADOR','EFICIENCIA (HORA)'];
+var COL_LABELS=['Cliente','Finalização','Venda','Custo Fábrica','Custo Local','Total Obra','Lucro','MKP','Horas','Efic./h'];
+var CURRENCY_COLS=['VENDA (CONTRATO)','CUSTO FABRICA','CUSTO LOCAL','TOTAL OBRA','LUCRO'];
 
 document.getElementById('btn-login').addEventListener('click', startAuth);
 document.getElementById('btn-refresh').addEventListener('click', loadData);
@@ -209,8 +212,7 @@ document.getElementById('search-assistencia').addEventListener('input', function
 document.getElementById('search-engenharia').addEventListener('input', function(){ renderTable('engenharia'); });
 document.getElementById('year-filter-assistencia').addEventListener('change', function(){ renderTable('assistencia'); });
 document.getElementById('year-filter-engenharia').addEventListener('change', function(){ renderTable('engenharia'); });
-document.getElementById('status-filter-assistencia').addEventListener('change', function(){ renderTable('assistencia'); });
-document.getElementById('status-filter-engenharia').addEventListener('change', function(){ renderTable('engenharia'); });
+
 
 function loadScript(src) {
   return new Promise(function(res,rej){
@@ -605,9 +607,7 @@ function renderMkp() {
   }).join('');
 }
 
-var COLS=['CLIENTE','DATA FINALIZACAO','VENDA (CONTRATO)','CUSTO FABRICA','CUSTO LOCAL','TOTAL OBRA','LUCRO','MKP','HORAS MONTADOR','EFICIENCIA (HORA)'];
-var COL_LABELS=['Cliente','Finalização','Venda','Custo Fábrica','Custo Local','Total Obra','Lucro','MKP','Horas','Efic./h'];
-var CURRENCY_COLS=['VENDA (CONTRATO)','CUSTO FABRICA','CUSTO LOCAL','TOTAL OBRA','LUCRO'];
+
 
 function findCol(row, name) {
   var clean = function(s){ return s.toUpperCase().replace(/[^A-Z0-9]/g,''); };
