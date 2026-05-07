@@ -883,9 +883,9 @@ const FILE_ID  = '01UXE5TTHMDKXJPIXCXBCZXT7HT3BNHYDT';
 // MSAL config — você precisará registrar um App no Azure AD com as permissões:
 // Files.Read.All, Sites.Read.All
 const MSAL_CONFIG = {
-  clientId: 'SEU_CLIENT_ID_AQUI', // ← substitua pelo seu App Registration Client ID
+  clientId: '2610fa8f-617b-4ec6-928a-b1e0ee7f10cd',
   authority: 'https://login.microsoftonline.com/common',
-  redirectUri: window.location.href.split('?')[0].split('#')[0],
+  redirectUri: 'https://wanessabo-maker.github.io/evviva-dashboard/evviva_dashboard.html',
 };
 
 const SCOPES = ['Files.Read.All', 'Sites.Read.All', 'offline_access'];
@@ -904,12 +904,21 @@ let msalInstance = null;
 // MSAL BOOTSTRAP
 // ============================================================
 async function initMsal() {
-  if (window.msal) return;
-  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/msal.js/2.38.3/msal-browser.min.js');
+  if (window.msal && window.msal.PublicClientApplication) return;
+  // Tentar CDN principal
+  try {
+    await loadScript('https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js');
+  } catch(e) {
+    try {
+      await loadScript('https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.0/lib/msal-browser.min.js');
+    } catch(e2) {
+      console.error('MSAL não carregou');
+      return null;
+    }
+  }
   const { PublicClientApplication } = window.msal || {};
-  // fallback
   if (!PublicClientApplication) {
-    console.warn('MSAL não carregou, tentando com msal.min.js');
+    console.warn('MSAL não carregou');
     return null;
   }
   const config = {
@@ -934,25 +943,17 @@ async function startAuth() {
   try {
     await initMsal();
     if (!msalInstance) {
-      // Modo demo se MSAL não disponível
       loadDemoData();
       return;
     }
-    await msalInstance.handleRedirectPromise();
     const accounts = msalInstance.getAllAccounts();
     if (accounts.length === 0) {
-      await msalInstance.loginRedirect({ scopes: SCOPES });
-    } else {
-      loadData();
+      await msalInstance.loginPopup({ scopes: SCOPES });
     }
+    loadData();
   } catch(e) {
-    console.error(e);
-    // Se Client ID não configurado, carrega demo
-    if (MSAL_CONFIG.clientId === 'SEU_CLIENT_ID_AQUI') {
-      loadDemoData();
-    } else {
-      document.getElementById('auth-error').style.display = 'block';
-    }
+    console.error('Auth error:', e);
+    document.getElementById('auth-error').style.display = 'block';
   }
 }
 
@@ -1378,7 +1379,6 @@ window.addEventListener('load', async () => {
   try {
     await initMsal();
     if (msalInstance) {
-      const resp = await msalInstance.handleRedirectPromise();
       const accounts = msalInstance.getAllAccounts();
       if (accounts.length > 0) {
         loadData();
@@ -1386,7 +1386,6 @@ window.addEventListener('load', async () => {
       }
     }
   } catch(e) { console.error(e); }
-  // Mostra tela de auth
   document.getElementById('auth-screen').style.display = 'flex';
 });
 </script>
