@@ -166,7 +166,7 @@ td.highlight{color:var(--accent);font-weight:500;}
         <div class="table-controls">
           <input class="filter-input" type="text" id="search-assistencia" placeholder="Buscar cliente...">
           <select class="filter-select" id="year-filter-assistencia"><option value="">Todos os anos</option></select>
-          <select class="filter-select" id="status-filter-assistencia"><option value="">Todos os status</option><option value="finalizado">Finalizados</option><option value="montagem">Em Montagem</option></select>
+          
         </div>
       </div>
       <table><thead><tr id="thead-assistencia"></tr></thead><tbody id="tbody-assistencia"></tbody></table>
@@ -178,7 +178,7 @@ td.highlight{color:var(--accent);font-weight:500;}
         <div class="table-controls">
           <input class="filter-input" type="text" id="search-engenharia" placeholder="Buscar cliente...">
           <select class="filter-select" id="year-filter-engenharia"><option value="">Todos os anos</option></select>
-          <select class="filter-select" id="status-filter-engenharia"><option value="">Todos os status</option><option value="finalizado">Finalizados</option><option value="montagem">Em Montagem</option></select>
+          
         </div>
       </div>
       <table><thead><tr id="thead-engenharia"></tr></thead><tbody id="tbody-engenharia"></tbody></table>
@@ -294,6 +294,24 @@ async function loadData() {
   }
 }
 
+function excelDateToStr(val) {
+  if (!val) return '';
+  var s = String(val).trim();
+  if (!s || s === '0') return '';
+  // Já está no formato DD/MM/AAAA ou similar
+  if (s.indexOf('/') >= 0 || s.indexOf('-') >= 0) return s;
+  // Serial do Excel
+  var n = parseFloat(s);
+  if (!isNaN(n) && n > 1000) {
+    var d = new Date((n - 25569) * 86400 * 1000);
+    var day = String(d.getUTCDate()).padStart(2,'0');
+    var month = String(d.getUTCMonth()+1).padStart(2,'0');
+    var year = d.getUTCFullYear();
+    return day+'/'+month+'/'+year;
+  }
+  return s;
+}
+
 async function readSheet(token, sheet) {
   if (!sheet) return [];
   setLoadingText('Lendo: '+sheet.name+'...');
@@ -301,66 +319,94 @@ async function readSheet(token, sheet) {
   var j = await r.json();
   if (!j.values || j.values.length < 2) return [];
 
-  // Encontrar linha de cabeçalho (primeira linha com 'CLIENTE')
-  var headerRowIdx = 0;
-  for (var i=0; i<Math.min(j.values.length,10); i++) {
+  // Encontrar linha de cabeçalho — buscar linha com 'CLIENTE'
+  var headerRowIdx = -1;
+  for (var i=0; i<j.values.length; i++) {
     var row = j.values[i];
     for (var c=0; c<row.length; c++) {
-      if (String(row[c]||'').toUpperCase().indexOf('CLIENTE') >= 0) {
+      if (String(row[c]||'').toUpperCase().trim() === 'CLIENTE') {
         headerRowIdx = i; break;
       }
     }
-    if (headerRowIdx === i && i > 0) break;
+    if (headerRowIdx >= 0) break;
   }
+  if (headerRowIdx < 0) return [];
 
   var headers = j.values[headerRowIdx].map(function(h){ return String(h||'').trim().toUpperCase(); });
   var dataRows = j.values.slice(headerRowIdx + 1);
 
-  // Lidar com células mescladas: propagar valor da primeira linha do grupo
-  // A planilha tem células mescladas — o valor aparece só na primeira linha do grupo
-  // Precisamos propagar CLIENTE e DATA para as linhas vazias abaixo
-  var lastValues = {};
+  // Colunas fixas baseadas na estrutura visual da planilha
+  // A=CLIENTE, B=DATA FINALIZACAO, C=VENDA(CONTRATO), D=CUSTO FÁBRICA
+  // E=CUSTO LOCAL, F=TOTAL OBRA, G=LUCRO, H=MKP, I=HORAS MONTADOR, J=EFICIÊNCIA
+  var colMap = {
+    'CLIENTE': 0, 'DATA FINALIZACAO': 1, 'VENDA (CONTRATO)': 2,
+    'CUSTO FABRICA': 3, 'CUSTO LOCAL': 4, 'TOTAL OBRA': 5,
+    'LUCRO': 6, 'MKP': 7, 'HORAS MONTADOR': 8, 'EFICIENCIA (HORA)': 9
+  };
+
+  // Detectar índices reais pelos cabeçalhos
+  var idxCliente = -1, idxData = -1, idxVenda = -1, idxCustoFab = -1;
+  var idxCustoLoc = -1, idxTotal = -1, idxLucro = -1, idxMkp = -1;
+  var idxHoras = -1, idxEfic = -1;
+  headers.forEach(function(h, i) {
+    var hu = h.toUpperCase().replace(/[^A-Z0-9]/g,'');
+    if (hu === 'CLIENTE') idxCliente = i;
+    else if (hu.indexOf('DATA') >= 0 || hu.indexOf('FINALIZ') >= 0) idxData = i;
+    else if (hu.indexOf('VENDA') >= 0 || hu.indexOf('CONTRATO') >= 0) idxVenda = i;
+    else if (hu.indexOf('CUSTOF') >= 0 || hu.indexOf('CUSTOFAB') >= 0 || (hu.indexOf('CUSTO') >= 0 && hu.indexOf('FAB') >= 0)) idxCustoFab = i;
+    else if (hu.indexOf('CUSTOL') >= 0 || hu.indexOf('CUSTOLOC') >= 0 || (hu.indexOf('CUSTO') >= 0 && hu.indexOf('LOC') >= 0)) idxCustoLoc = i;
+    else if (hu.indexOf('TOTALOB') >= 0 || hu.indexOf('TOTAL') >= 0) idxTotal = i;
+    else if (hu.indexOf('LUCRO') >= 0) idxLucro = i;
+    else if (hu === 'MKP') idxMkp = i;
+    else if (hu.indexOf('HORAS') >= 0 || hu.indexOf('MONTADOR') >= 0) idxHoras = i;
+    else if (hu.indexOf('EFIC') >= 0 || hu.indexOf('HORA') >= 0) idxEfic = i;
+  });
+
+  // Fallback para posições fixas se não encontrou pelos nomes
+  if (idxCliente < 0) idxCliente = 0;
+  if (idxData < 0) idxData = 1;
+  if (idxVenda < 0) idxVenda = 2;
+  if (idxCustoFab < 0) idxCustoFab = 3;
+  if (idxCustoLoc < 0) idxCustoLoc = 4;
+  if (idxTotal < 0) idxTotal = 5;
+  if (idxLucro < 0) idxLucro = 6;
+  if (idxMkp < 0) idxMkp = 7;
+  if (idxHoras < 0) idxHoras = 8;
+  if (idxEfic < 0) idxEfic = 9;
+
+  var lastCliente = '';
   var results = [];
 
   dataRows.forEach(function(row) {
-    // Verificar se a linha tem algum dado
     var hasAnyData = row.some(function(c){ return c !== null && c !== '' && c !== undefined; });
     if (!hasAnyData) return;
 
-    var obj = {};
-    headers.forEach(function(h, i) {
-      var val = row[i];
-      if (val !== null && val !== '' && val !== undefined) {
-        obj[h] = val;
-        lastValues[h] = val;
-      } else {
-        // Propagar valor anterior para campos de identidade (cliente)
-        if (h === 'CLIENTE') {
-          obj[h] = lastValues[h] || '';
-        } else {
-          obj[h] = val !== undefined ? val : '';
-        }
-      }
-    });
+    // Propagar cliente (células mescladas)
+    var clienteVal = String(row[idxCliente] || '').trim();
+    if (clienteVal && clienteVal.toUpperCase() !== 'CLIENTE') lastCliente = clienteVal;
+    else if (!clienteVal) clienteVal = lastCliente;
+    else clienteVal = lastCliente;
 
-    // REGRA PRINCIPAL: só incluir se DATA FINALIZACAO estiver preenchida
-    var dateKey = '';
-    headers.forEach(function(h) {
-      if (h.indexOf('DATA') >= 0 || h.indexOf('FINALIZ') >= 0) dateKey = h;
-    });
+    // Ignorar linhas de cabeçalho repetido
+    if (clienteVal.toUpperCase() === 'CLIENTE') return;
 
-    var dateVal = String(obj[dateKey] || '').trim();
-    if (!dateVal || dateVal === '0' || dateVal === '') return;
+    // Data de finalização — REGRA PRINCIPAL
+    var rawDate = row[idxData];
+    var dateStr = excelDateToStr(rawDate);
+    if (!dateStr) return; // Sem data = ignorar
 
-    // Ignorar linha de cabeçalho duplicada
-    if (String(obj['CLIENTE']||'').toUpperCase() === 'CLIENTE') return;
-
-    // Só incluir se tiver pelo menos cliente ou venda
-    var clienteVal = String(obj['CLIENTE']||'').trim();
-    var vendaKey = headers.find(function(h){ return h.indexOf('VENDA') >= 0; }) || '';
-    var vendaVal = vendaKey ? parseCurrencyStatic(obj[vendaKey]) : 0;
-
-    if (!clienteVal && vendaVal === 0) return;
+    var obj = {
+      'CLIENTE': clienteVal,
+      'DATA FINALIZACAO': dateStr,
+      'VENDA (CONTRATO)': row[idxVenda] !== undefined ? row[idxVenda] : '',
+      'CUSTO FABRICA': row[idxCustoFab] !== undefined ? row[idxCustoFab] : '',
+      'CUSTO LOCAL': row[idxCustoLoc] !== undefined ? row[idxCustoLoc] : '',
+      'TOTAL OBRA': row[idxTotal] !== undefined ? row[idxTotal] : '',
+      'LUCRO': row[idxLucro] !== undefined ? row[idxLucro] : '',
+      'MKP': row[idxMkp] !== undefined ? row[idxMkp] : '',
+      'HORAS MONTADOR': row[idxHoras] !== undefined ? row[idxHoras] : '',
+      'EFICIENCIA (HORA)': row[idxEfic] !== undefined ? row[idxEfic] : ''
+    };
 
     results.push(obj);
   });
