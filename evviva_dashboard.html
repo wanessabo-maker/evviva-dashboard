@@ -300,12 +300,78 @@ async function readSheet(token, sheet) {
   var r = await fetch('https://graph.microsoft.com/v1.0/drives/'+DRIVE_ID+'/items/'+FILE_ID+'/workbook/worksheets/'+encodeURIComponent(sheet.id)+'/usedRange', { headers: { Authorization: 'Bearer '+token } });
   var j = await r.json();
   if (!j.values || j.values.length < 2) return [];
-  var headers = j.values[0].map(function(h){ return String(h||'').trim().toUpperCase(); });
-  return j.values.slice(1).filter(function(row){ return row.some(function(c){ return c !== null && c !== ''; }); }).map(function(row){
+
+  // Encontrar linha de cabeçalho (primeira linha com 'CLIENTE')
+  var headerRowIdx = 0;
+  for (var i=0; i<Math.min(j.values.length,10); i++) {
+    var row = j.values[i];
+    for (var c=0; c<row.length; c++) {
+      if (String(row[c]||'').toUpperCase().indexOf('CLIENTE') >= 0) {
+        headerRowIdx = i; break;
+      }
+    }
+    if (headerRowIdx === i && i > 0) break;
+  }
+
+  var headers = j.values[headerRowIdx].map(function(h){ return String(h||'').trim().toUpperCase(); });
+  var dataRows = j.values.slice(headerRowIdx + 1);
+
+  // Lidar com células mescladas: propagar valor da primeira linha do grupo
+  // A planilha tem células mescladas — o valor aparece só na primeira linha do grupo
+  // Precisamos propagar CLIENTE e DATA para as linhas vazias abaixo
+  var lastValues = {};
+  var results = [];
+
+  dataRows.forEach(function(row) {
+    // Verificar se a linha tem algum dado
+    var hasAnyData = row.some(function(c){ return c !== null && c !== '' && c !== undefined; });
+    if (!hasAnyData) return;
+
     var obj = {};
-    headers.forEach(function(h,i){ obj[h] = row[i] !== undefined ? row[i] : ''; });
-    return obj;
+    headers.forEach(function(h, i) {
+      var val = row[i];
+      if (val !== null && val !== '' && val !== undefined) {
+        obj[h] = val;
+        lastValues[h] = val;
+      } else {
+        // Propagar valor anterior para campos de identidade (cliente)
+        if (h === 'CLIENTE') {
+          obj[h] = lastValues[h] || '';
+        } else {
+          obj[h] = val !== undefined ? val : '';
+        }
+      }
+    });
+
+    // REGRA PRINCIPAL: só incluir se DATA FINALIZACAO estiver preenchida
+    var dateKey = '';
+    headers.forEach(function(h) {
+      if (h.indexOf('DATA') >= 0 || h.indexOf('FINALIZ') >= 0) dateKey = h;
+    });
+
+    var dateVal = String(obj[dateKey] || '').trim();
+    if (!dateVal || dateVal === '0' || dateVal === '') return;
+
+    // Ignorar linha de cabeçalho duplicada
+    if (String(obj['CLIENTE']||'').toUpperCase() === 'CLIENTE') return;
+
+    // Só incluir se tiver pelo menos cliente ou venda
+    var clienteVal = String(obj['CLIENTE']||'').trim();
+    var vendaKey = headers.find(function(h){ return h.indexOf('VENDA') >= 0; }) || '';
+    var vendaVal = vendaKey ? parseCurrencyStatic(obj[vendaKey]) : 0;
+
+    if (!clienteVal && vendaVal === 0) return;
+
+    results.push(obj);
   });
+
+  return results;
+}
+
+function parseCurrencyStatic(v) {
+  if (typeof v === 'number') return v;
+  var s = String(v||'0').replace('R$','').replace(/\./g,'').replace(',','.').trim();
+  return parseFloat(s) || 0;
 }
 
 function loadDemoData() {
